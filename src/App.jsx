@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toPng } from "html-to-image";
 
 /* ══════════════════════════════════════════════
    命鏡 · 명경 — 거울은 꾸미지 않는다
@@ -360,12 +361,39 @@ function splitEasy(t) {
   };
 }
 
-/* ── 프롬프트 ── */
-const lifePromptA = ctx =>
-  `${STYLE}\n\n${ctx}\n\n위 명식으로 초년·청소년기(1~19세)와 청년기(20~39세)를 풀이하라. 각 시기를 지나는 대운 글자와 원국의 관계(합충, 신살, 십성), 용신 성격을 근거로 실제 삶의 사건 결로 서술한다. 청소년기는 성정·가정환경의 기운·학업, 청년기는 진로·인연·좌절과 발복 시점까지 험한 대목도 그대로 쓴다. 각 시기 350자 내외.\n출력 형식을 정확히 지켜라:\n[[청소년기]]\n내용\n[[청년기]]\n내용`;
+function buildReportText(form, sj, life, fortune, health, duText) {
+  const pad = n => String(n).padStart(2, "0");
+  const L = [];
+  L.push("命鏡 · 명경 — 사주 감정 결과");
+  L.push(`${form.name ? form.name + " · " : ""}양력 ${form.y}.${pad(form.m)}.${pad(form.d)} ${form.noTime ? "시간미상" : form.h + ":" + pad(form.min)} · ${form.gender === "male" ? "남" : "여"}`);
+  const p = sj.pillars;
+  const gz = (s,b) => s==null ? "미상" : S[s]+B[b];
+  L.push(`명식  시주 ${gz(p.hs,p.hb)} / 일주 ${S[p.ds]}${B[p.db]} / 월주 ${S[p.ms]}${B[p.mb]} / 년주 ${S[p.ys]}${B[p.yb]}`);
+  L.push(`요약  ${sj.strength.verdict} · ${sj.yong.el ? `용신 ${sj.yong.el}·희신 ${sj.yong.hee}` : sj.yong.note} · 공망 ${sj.gongmang.map(g=>B[g]).join("·")} · 대운 ${sj.forward?"순행":"역행"} ${sj.dAge}세 시작`);
+  const sec = (title, text) => {
+    if (!text) return;
+    let grade=null, body=text;
+    const m = text.match(/^\s*(대길|길|평|흉|대흉)\s*\n/);
+    if (m) { grade=m[1]; body=text.slice(m[0].length).trim(); }
+    const es = splitEasy(body);
+    L.push(`■ ${title}${grade?` [${grade}]`:""}\n${es.main}${es.easy?`\n\n· 쉽게 말하면: ${es.easy}`:""}`);
+  };
+  L.push("━━━ 인생행로 ━━━");
+  [["청소년기 (1~19세)","청소년기"],["청년기 (20~39세)","청년기"],["중년기 (40~59세)","중년기"],["노년기 (60세 이후)","노년기"]]
+    .forEach(([t,k])=>sec(t, life && life[k]));
+  L.push(`━━━ ${CUR_YEAR} 丙午년 운세 ━━━`);
+  ["금전운","연애운","사업운","직장·명예운","대인관계운","건강운"].forEach(k=>sec(k, fortune && fortune[k]));
+  L.push("━━━ 건강행로 ━━━");
+  [["타고난 약처","타고난 약처"],["조심할 시기","조심할 시기"],["액막이 처방","액막이"]].forEach(([t,k])=>sec(t, health && health[k]));
+  L.push("━━━ 대운별 풀이 ━━━");
+  sj.daeun.forEach((du,i)=>sec(`${du.start}~${du.end}세 ${S[du.s]}${B[du.b]} 대운`, duText && duText[i]));
+  L.push("※ 고전 명리 해석 전통에 따른 참고용 풀이이며 예언·의료·법률 조언이 아니다. 건강 대목의 실제 증상은 병원 진료가 우선이다.");
+  return L.join("\n\n");
+}
 
-const lifePromptB = ctx =>
-  `${STYLE}\n\n${ctx}\n\n위 명식으로 중년기(40~59세)와 노년기(60세 이후)를 풀이하라. 각 시기를 지나는 대운 글자와 원국의 관계(합충, 신살, 십성), 용신 성격을 근거로 실제 삶의 사건 결로 서술한다. 중년기는 재물·명예의 성쇠와 부부·가족 인연의 굴곡, 노년기는 말년의 형세까지 험한 대목도 그대로 쓴다. 각 시기 350자 내외.\n출력 형식을 정확히 지켜라:\n[[중년기]]\n내용\n[[노년기]]\n내용`;
+/* ── 프롬프트 ── */
+const lifePrompt = ctx =>
+  `${STYLE}\n\n${ctx}\n\n위 명식으로 평생의 행로를 네 시기로 나눠 풀이하라. 각 시기를 지나는 대운 글자와 원국의 관계(합충, 신살, 십성), 용신 성격을 근거로 실제 삶의 사건 결로 서술한다. 청소년기(1~19세)는 성정·가정환경의 기운·학업, 청년기(20~39세)는 진로·인연·좌절과 발복 시점, 중년기(40~59세)는 재물·명예의 성쇠와 부부·가족 인연의 굴곡, 노년기(60세 이후)는 말년의 형세까지 험한 대목도 그대로 쓴다. 각 시기 350자 내외.\n출력 형식을 정확히 지켜라:\n[[청소년기]]\n내용\n[[청년기]]\n내용\n[[중년기]]\n내용\n[[노년기]]\n내용`;
 
 const fortunePrompt = ctx =>
   `${STYLE}\n\n${ctx}\n\n${CUR_YEAR}년 병오년 세운과 현재 대운을 원국에 대입해 올해의 금전운, 연애운, 사업운, 직장·명예운, 대인관계운, 건강운을 풀이하라. 각 항목의 첫 줄에는 등급 한 단어만 쓴다(대길/길/평/흉/대흉 중 하나). 둘째 줄부터 본문 220자 내외, 길흉을 분명히 가르고 근거 글자를 명시한다. 흉·대흉 항목은 마지막 문장에 그 흉을 줄일 실질적 대비책 한 문장을 붙인다. 건강운은 오행 불균형이 가리키는 경향까지만 말하고 진단은 하지 않는다.\n출력 형식을 정확히 지켜라:\n[[금전운]]\n등급\n내용\n[[연애운]]\n등급\n내용\n[[사업운]]\n등급\n내용\n[[직장·명예운]]\n등급\n내용\n[[대인관계운]]\n등급\n내용\n[[건강운]]\n등급\n내용`;
@@ -539,6 +567,8 @@ const CSS = `
   .mg-retry { display:block; margin:6px auto 0; background:none; border:1px solid #c8402f;
     color:#e08a7d; padding:8px 22px; border-radius:3px; font-family:inherit; cursor:pointer; }
   .mg-foot { text-align:center; font-size:11.5px; color:#5c5266; margin-top:38px; line-height:1.8; }
+  .mg-savebar { display:flex; gap:8px; margin-top:24px; }
+  .mg-tbtn:disabled { opacity:.5; cursor:default; }
   .mg-back { background:none; border:none; color:#8d8294; font-size:13px; font-family:inherit;
     cursor:pointer; padding:6px 0; letter-spacing:2px; }
 `;
@@ -581,7 +611,7 @@ export default function App() {
     return n;
   });
 
-  const storeKey = f => `mg7:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
+  const storeKey = f => `mg6:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
 
   useEffect(()=>{ (async()=>{
     try { const r = await store.get("mg:last");
@@ -596,14 +626,14 @@ export default function App() {
 
   const loadAll = async (s, keys, f) => {
     const ctx = buildCtx(s, f||form);
-    const todo = keys || ["lifeA","lifeB","fortune","health","da","db"];
+    const todo = keys || ["life","fortune","health","da","db"];
     setProg({ done:0, total:todo.length });
     setFailMsg(null);
     const fail=[]; let done=0;
     const bump = ()=>{ done++; setProg({ done, total:todo.length }); };
     const miss = e => { if (!fail.length) setFailMsg((e && e.message) || null); };
     const take = (k, text) => {
-      if (k==="lifeA" || k==="lifeB") {
+      if (k==="life") {
         const add = parseSections(text);
         Object.assign(resultsRef.current.life, add);
         setLife(p=>({ ...(p||{}), ...add }));
@@ -624,15 +654,10 @@ export default function App() {
     };
 
     // 1단계: 인생행로 총론을 먼저 확정한다 (모든 풀이의 일관성 기준)
-    const lifeKeys = todo.filter(k=>k==="lifeA"||k==="lifeB");
-    if (lifeKeys.length) {
-      const lp = { lifeA: lifePromptA(ctx), lifeB: lifePromptB(ctx) };
-      const rs1 = await Promise.allSettled(lifeKeys.map(k=>callClaude(lp[k], runIdRef.current)));
-      rs1.forEach((r,i)=>{
-        const k = lifeKeys[i]; bump();
-        if (r.status!=="fulfilled"){ miss(r.reason); fail.push(k); return; }
-        take(k, r.value);
-      });
+    if (todo.includes("life")) {
+      try { take("life", await callClaude(lifePrompt(ctx), runIdRef.current)); }
+      catch(e){ miss(e); fail.push("life"); }
+      bump();
     }
 
     // 2단계: 확정된 총론을 전제로 운세·대운을 병렬 생성한다
@@ -648,7 +673,7 @@ export default function App() {
       da: () => daeunBatchPrompt(ctx2, s, 0, 4),
       db: () => daeunBatchPrompt(ctx2, s, 4, 8),
     };
-    const rest = todo.filter(k=>k!=="lifeA"&&k!=="lifeB");
+    const rest = todo.filter(k=>k!=="life");
     const rs = await Promise.allSettled(rest.map(k=>callClaude(prompts[k](), runIdRef.current)));
     rs.forEach((r,i)=>{
       const k = rest[i]; bump();
@@ -695,6 +720,26 @@ export default function App() {
     const fail = await loadAll(sj, keys, form);
     if (fail.length) setFailed(fail);
     else { await saveCache(form); setStep("result"); }
+  };
+
+  const [saving, setSaving] = useState(false);
+  const resultRef = useRef(null);
+  const fileStem = () => `명경_${form.y}${String(form.m).padStart(2,"0")}${String(form.d).padStart(2,"0")}${form.name?"_"+form.name:""}`;
+  const saveTxt = () => {
+    const txt = buildReportText(form, sj, life, fortune, health, duText);
+    const blob = new Blob(["\ufeff"+txt], { type:"text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = fileStem()+".txt";
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  const savePng = async () => {
+    if (!resultRef.current || saving) return;
+    setSaving(true);
+    try {
+      const url = await toPng(resultRef.current, { backgroundColor:"#14101a", pixelRatio:2 });
+      const a = document.createElement("a"); a.href = url; a.download = fileStem()+".png"; a.click();
+    } catch(e){ alert("이미지 저장에 실패했다: " + e.message); }
+    setSaving(false);
   };
 
   const T = ({ text }) => (
@@ -873,13 +918,13 @@ export default function App() {
               : <>
                   <span key={loadMsg} className="mg-loadmsg">{LOAD_MSGS[loadMsg]}</span>
                   <div className="mg-progbar"><div style={{width:(prog.total?Math.max(6,prog.done/prog.total*100):6)+"%"}} /></div>
-                  <div className="mg-progtxt">천기 {prog.total||6}장 중 {prog.done}장을 읽었다</div>
+                  <div className="mg-progtxt">천기 {prog.total||5}장 중 {prog.done}장을 읽었다</div>
                 </>}
           </div>
         )}
 
         {step==="result" && sj && (
-          <>
+          <div ref={resultRef} style={{background:"#14101a"}}>
             {form.name && <div style={{textAlign:"center",fontSize:14,color:"#c8a45f",letterSpacing:3,marginTop:18}}>{form.name}의 명식</div>}
             <div className="mg-sub2">
               양력 {form.y}.{form.m}.{form.d} {form.noTime?"시간미상":`${form.h}:${String(form.min).padStart(2,"0")}`}
@@ -1033,8 +1078,12 @@ export default function App() {
               <Stage hanja="禳" name="액막이 처방" text={health["액막이"]} />
             </>}
 
+            <div className="mg-savebar">
+              <button className="mg-tbtn" onClick={saveTxt}>풀이 전체 .txt 저장</button>
+              <button className="mg-tbtn" onClick={savePng} disabled={saving}>{saving ? "이미지 만드는 중…" : "지금 화면 .png 저장"}</button>
+            </div>
             <button className="mg-back" onClick={()=>setStep("input")}>← 다른 사주 보기</button>
-          </>
+          </div>
         )}
 
         <div className="mg-foot">
