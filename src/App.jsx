@@ -571,7 +571,7 @@ export default function App() {
     return n;
   });
 
-  const storeKey = f => `mg:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
+  const storeKey = f => `mg2:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
 
   useEffect(()=>{ (async()=>{
     try { const r = await store.get("mg:last");
