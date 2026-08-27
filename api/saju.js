@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6", // 비용을 1/3로 줄이려면 "claude-haiku-4-5-20251001"
-        max_tokens: 6000,           // 통합 호출 + 액막이·쉬운풀이까지 잘리지 않는 여유
+        max_tokens: 8000,           // 액막이·쉬운풀이 포함 어떤 조합에도 잘리지 않는 여유
         messages: [{ role: "user", content: prompt }],
       }),
     });
