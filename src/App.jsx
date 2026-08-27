@@ -328,6 +328,7 @@ const STYLE = `너는 30년 경력의 명리학자다. 규칙:
 - 마크다운 기호(#, *, -) 없이 순수 문단으로만 쓴다.
 - 제공된 신강약·용신 판정과 원국 지지 관계를 모든 풀이의 공통 전제로 삼아, 항목끼리 방향이 어긋나지 않게 하라.
 - 300자가 넘는 풀이는 문단을 둘로 나눈다.
+- 각 항목의 본문을 마친 뒤 줄을 바꿔 "※ 쉽게 말하면:"으로 시작하는 2~3문장을 붙인다. 여기서는 명리 용어를 하나도 쓰지 않고, 누구나 알아듣는 일상어로 같은 내용을 풀어 말한다. 직설 기조는 그대로 유지한다.
 - 분량을 넘기지 말고 마지막 문장까지 반드시 완결하라. 중간에 끊긴 출력은 실격이다.`;
 
 async function callClaude(prompt, runId) {
@@ -345,6 +346,15 @@ function parseSections(text) {
   while ((m=re.exec(text))) marks.push({ k:m[1].trim(), e:re.lastIndex, i:m.index });
   marks.forEach((mk,idx)=>{ out[mk.k]=text.slice(mk.e, idx+1<marks.length?marks[idx+1].i:undefined).trim(); });
   return out;
+}
+
+function splitEasy(t) {
+  const m = t.match(/※?\s*쉽게 말하면\s*[::]?/);
+  if (!m) return { main:t.trim(), easy:null };
+  return {
+    main: t.slice(0, m.index).trim(),
+    easy: t.slice(m.index + m[0].length).trim(),
+  };
 }
 
 /* ── 프롬프트 ── */
@@ -493,6 +503,10 @@ const CSS = `
     font-size:13px; letter-spacing:3px; cursor:pointer; }
   .mg-stage { animation:mgfade .5s ease; }
   @keyframes mgfade { from{opacity:0} to{opacity:1} }
+  .mg-easy { margin-top:14px; padding:12px 14px; background:#141019;
+    border-left:3px solid #c8a45f; border-radius:0 3px 3px 0;
+    font-size:14px; line-height:1.85; color:#b3a893; word-break:keep-all; white-space:pre-wrap; }
+  .mg-easy .lab { display:block; font-size:11px; letter-spacing:3px; color:#c8a45f; margin-bottom:6px; }
   .mg-tabs { display:flex; gap:8px; margin-top:24px; }
   .mg-tab { flex:1; padding:13px 0; text-align:center; background:#1d1723; border:1px solid #2c2434;
     color:#8d8294; border-radius:3px; cursor:pointer; font-size:15px; letter-spacing:2px; font-family:inherit; }
@@ -677,12 +691,14 @@ export default function App() {
     let grade=null, body=text;
     const m = text.match(/^\s*(대길|길|평|흉|대흉)\s*\n/);
     if (m) { grade=m[1]; body=text.slice(m[0].length).trim(); }
+    const { main, easy } = splitEasy(body);
     return (
       <div className="mg-card mg-stage">
         <div className="era"><span className="h">{hanja}</span>{name}
           {grade && <span className={"mg-grade g-"+grade}>{grade}</span>}
         </div>
-        <p><T text={body} /></p>
+        <p><T text={main} /></p>
+        {easy && <div className="mg-easy"><span className="lab">쉽게 말하면</span>{easy}</div>}
       </div>
     );
   };
@@ -938,8 +954,11 @@ export default function App() {
                       onClick={()=>setSheet("용신")}>{fateOf(sj, du.s, du.b)}</button>}
                 </div>
                 {duText[selDu]
-                  ? <p style={{fontSize:15.5,lineHeight:1.95,margin:"14px 0 0",whiteSpace:"pre-wrap",wordBreak:"keep-all"}}>
-                      <T text={duText[selDu]} /></p>
+                  ? (()=>{ const { main, easy } = splitEasy(duText[selDu]); return (<>
+                      <p style={{fontSize:15.5,lineHeight:1.95,margin:"14px 0 0",whiteSpace:"pre-wrap",wordBreak:"keep-all"}}>
+                        <T text={main} /></p>
+                      {easy && <div className="mg-easy"><span className="lab">쉽게 말하면</span>{easy}</div>}
+                    </>); })()
                   : <div className="mg-err">이 대운의 풀이가 비어 있다.
                       <button className="mg-retry" onClick={()=>loadAll(sj,[selDu<4?"da":"db"],form)}>다시 읽는다</button></div>}
               </div>
