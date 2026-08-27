@@ -308,6 +308,7 @@ ${p.hs==null?"시주: 시간 미상 (시주 제외하고 풀이)":pil(p.hs,p.hb,
 원국 지지 관계: ${sj.innerRels.length ? sj.innerRels.map(r=>r.l).join(", ") : "두드러진 합충형 없음"}
 지장간(지지 속 숨은 천간): ${sj.branches.map(b=>`${B[b]}(${HIDDEN[b].map(s=>S[s]).join("")})`).join(" ")}
 오행분포: ${ELN.map(e=>`${e}${sj.el[e]}`).join(" ")}
+[오행 개운 대응] 목=청·녹색, 신맛(식초·매실 등), 동쪽 / 화=적색, 쓴맛(쑥·커피 등), 남쪽 / 토=황색, 단맛(곡물·대추 등), 중앙·흙 가까이 / 금=백색, 매운맛(생강·파 등), 서쪽 / 수=흑·남색, 짠맛(해조·콩 등), 북쪽
 천을귀인: ${sj.cheonEul.length?sj.cheonEul.join(", "):"원국에 없음"}
 공망(일주 기준): ${sj.gongmang.map(g=>B[g]).join("·")}
 대운(${sj.forward?"순행":"역행"}, ${sj.dAge}세 시작): ${du}
@@ -328,6 +329,8 @@ const STYLE = `너는 30년 경력의 명리학자다. 규칙:
 - 마크다운 기호(#, *, -) 없이 순수 문단으로만 쓴다.
 - 제공된 신강약·용신 판정과 원국 지지 관계를 모든 풀이의 공통 전제로 삼아, 항목끼리 방향이 어긋나지 않게 하라.
 - 300자가 넘는 풀이는 문단을 둘로 나눈다.
+- 해석이 두 갈래로 갈릴 수 있는 대목(양면 신살, 합충의 이중 작용, 길흉이 섞인 운)에서는 긍정적 가능성 쪽을 결론으로 채택하되, 부정적 가능성도 숨기지 말고 함께 명시한다.
+- 부정적 대목마다 그것을 막거나 덜어내는 액막이 조건을 구체적으로 붙인다. 명식의 용신·희신 오행을 기준으로 [오행 개운 대응]에서 색·음식·방위를 골라 명확히 지목하고, 피해야 할 행동과 시기도 함께 쓴다. "조심하라"로 끝내지 말고 무엇을 어떻게 하라고 쓴다.
 - 각 항목의 본문을 마친 뒤 줄을 바꿔 "※ 쉽게 말하면:"으로 시작하는 2~3문장을 붙인다. 여기서는 명리 용어를 하나도 쓰지 않고, 누구나 알아듣는 일상어로 같은 내용을 풀어 말한다. 직설 기조는 그대로 유지한다.
 - 분량을 넘기지 말고 마지막 문장까지 반드시 완결하라. 중간에 끊긴 출력은 실격이다.`;
 
@@ -363,6 +366,9 @@ const lifePrompt = ctx =>
 
 const fortunePrompt = ctx =>
   `${STYLE}\n\n${ctx}\n\n${CUR_YEAR}년 병오년 세운과 현재 대운을 원국에 대입해 올해의 금전운, 연애운, 사업운, 직장·명예운, 대인관계운, 건강운을 풀이하라. 각 항목의 첫 줄에는 등급 한 단어만 쓴다(대길/길/평/흉/대흉 중 하나). 둘째 줄부터 본문 220자 내외, 길흉을 분명히 가르고 근거 글자를 명시한다. 흉·대흉 항목은 마지막 문장에 그 흉을 줄일 실질적 대비책 한 문장을 붙인다. 건강운은 오행 불균형이 가리키는 경향까지만 말하고 진단은 하지 않는다.\n출력 형식을 정확히 지켜라:\n[[금전운]]\n등급\n내용\n[[연애운]]\n등급\n내용\n[[사업운]]\n등급\n내용\n[[직장·명예운]]\n등급\n내용\n[[대인관계운]]\n등급\n내용\n[[건강운]]\n등급\n내용`;
+
+const healthPrompt = ctx =>
+  `${STYLE}\n\n${ctx}\n\n[오행-장부 대응] 목=간·담·눈·근육, 화=심장·소장·혈관·순환, 토=비위·소화, 금=폐·대장·피부·호흡기, 수=신장·방광·생식·뼈·귀\n\n위 대응과 명식의 오행 과다·결핍, 지장간, 백호살 등 신살을 근거로 이 명식의 건강 행로를 풀이하라. [[타고난 약처]]에는 어느 장부 계통의 기운이 약한 팔자인지와 그 근거 글자를 220자 내외로 쓴다. [[조심할 시기]]에는 대운·세운 목록에서 그 오행이 충극당하거나 기신이 드는 구간을 골라, 몇 세 무렵·어느 대운에 어떤 증상 경향이 나타나기 쉬운지 시기별로 250자 내외로 쓴다. [[액막이]]에는 전통 개운법(보완 오행의 색·방위·계절 양생·음식의 성질)과 그 시기의 실질 대비(과로 회피, 정기 검진 등)를 220자 내외로 쓰되, 의학적 진단명 단정과 치료 지시는 금지하고 실제 증상이 있다면 병원 진료가 우선임을 한 문장 넣는다.\n출력 형식을 정확히 지켜라:\n[[타고난 약처]]\n내용\n[[조심할 시기]]\n내용\n[[액막이]]\n내용`;
 
 const daeunBatchPrompt = (ctx, sj, from, to) => {
   const items = sj.daeun.slice(from, to).map((du, i) => {
@@ -509,7 +515,7 @@ const CSS = `
   .mg-easy .lab { display:block; font-size:11px; letter-spacing:3px; color:#c8a45f; margin-bottom:6px; }
   .mg-tabs { display:flex; gap:8px; margin-top:24px; }
   .mg-tab { flex:1; padding:13px 0; text-align:center; background:#1d1723; border:1px solid #2c2434;
-    color:#8d8294; border-radius:3px; cursor:pointer; font-size:15px; letter-spacing:2px; font-family:inherit; }
+    color:#8d8294; border-radius:3px; cursor:pointer; font-size:13.5px; letter-spacing:1px; font-family:inherit; }
   .mg-tab.on { border-color:#c8a45f; color:#ece1c8; }
   .mg-stage { margin-top:16px; }
   .mg-stage .era { font-size:13px; color:#c8a45f; letter-spacing:4px; }
@@ -553,6 +559,7 @@ export default function App() {
   const [tab, setTab] = useState("life");
   const [life, setLife] = useState(null);
   const [fortune, setFortune] = useState(null);
+  const [health, setHealth] = useState(null);
   const [failed, setFailed] = useState(null);
   const [failMsg, setFailMsg] = useState(null);
   const [loadMsg, setLoadMsg] = useState(0);
@@ -561,7 +568,7 @@ export default function App() {
   const [duText, setDuText] = useState({});
   const [prog, setProg] = useState({ done:0, total:0 });
   const [lastForm, setLastForm] = useState(null);
-  const resultsRef = useRef({ life:{}, fortune:{}, duText:{} });
+  const resultsRef = useRef({ life:{}, fortune:{}, health:{}, duText:{} });
   const runIdRef = useRef("");
 
   const set = (k,v) => setForm(f=>{
@@ -571,7 +578,7 @@ export default function App() {
     return n;
   });
 
-  const storeKey = f => `mg2:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
+  const storeKey = f => `mg5:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
 
   useEffect(()=>{ (async()=>{
     try { const r = await store.get("mg:last");
@@ -586,37 +593,60 @@ export default function App() {
 
   const loadAll = async (s, keys, f) => {
     const ctx = buildCtx(s, f||form);
-    const all = {
-      life: lifePrompt(ctx),
-      fortune: fortunePrompt(ctx),
-      da: daeunBatchPrompt(ctx, s, 0, 4),
-      db: daeunBatchPrompt(ctx, s, 4, 8),
-    };
-    const todo = keys || Object.keys(all);
-    const res = [];
+    const todo = keys || ["life","fortune","health","da","db"];
     setProg({ done:0, total:todo.length });
     setFailMsg(null);
-    for (let i=0; i<todo.length; i+=4) {
-      const chunk = todo.slice(i, i+4);
-      const rs = await Promise.allSettled(chunk.map(k=>callClaude(all[k], runIdRef.current)));
-      res.push(...rs);
-      setProg({ done:res.length, total:todo.length });
+    const fail=[]; let done=0;
+    const bump = ()=>{ done++; setProg({ done, total:todo.length }); };
+    const miss = e => { if (!fail.length) setFailMsg((e && e.message) || null); };
+    const take = (k, text) => {
+      if (k==="life") {
+        const add = parseSections(text);
+        Object.assign(resultsRef.current.life, add);
+        setLife(p=>({ ...(p||{}), ...add }));
+      } else if (k==="fortune") {
+        const add = parseSections(text);
+        Object.assign(resultsRef.current.fortune, add);
+        setFortune(p=>({ ...(p||{}), ...add }));
+      } else if (k==="health") {
+        const add = parseSections(text);
+        Object.assign(resultsRef.current.health, add);
+        setHealth(p=>({ ...(p||{}), ...add }));
+      } else {
+        const sec = parseSections(text); const add = {};
+        Object.entries(sec).forEach(([kk,v])=>{ const m = kk.match(/대운\s*(\d+)/); if (m) add[+m[1]-1] = v.trim(); });
+        Object.assign(resultsRef.current.duText, add);
+        setDuText(p=>({ ...p, ...add }));
+      }
+    };
+
+    // 1단계: 인생행로 총론을 먼저 확정한다 (모든 풀이의 일관성 기준)
+    if (todo.includes("life")) {
+      try { take("life", await callClaude(lifePrompt(ctx), runIdRef.current)); }
+      catch(e){ miss(e); fail.push("life"); }
+      bump();
     }
-    const fail=[], lifeAdd={}, fortAdd={}, duAdd={};
-    res.forEach((r,i)=>{
-      const k = todo[i];
-      if (r.status!=="fulfilled"){ if (!fail.length) setFailMsg((r.reason && r.reason.message) || null); fail.push(k); return; }
-      if (k==="life") Object.assign(lifeAdd, parseSections(r.value));
-      else if (k==="fortune") Object.assign(fortAdd, parseSections(r.value));
-      else { const sec = parseSections(r.value);
-        Object.entries(sec).forEach(([kk,v])=>{ const m = kk.match(/대운\s*(\d+)/); if (m) duAdd[+m[1]-1] = v.trim(); }); }
+
+    // 2단계: 확정된 총론을 전제로 운세·대운을 병렬 생성한다
+    const lifeNow = resultsRef.current.life || {};
+    const anchor = ["청소년기","청년기","중년기","노년기"].filter(k=>lifeNow[k])
+      .map(k=>`[${k}] ${splitEasy(lifeNow[k]).main}`).join("\n");
+    const ctx2 = anchor
+      ? `${ctx}\n\n[이미 확정된 인생행로 총론]\n${anchor}\n[규칙] 아래에 쓰는 모든 풀이는 위 총론과 사실·길흉의 방향이 어긋나면 안 된다. 같은 시기를 다룰 때는 총론의 판단을 그대로 이어받아 근거와 사건을 더 구체화하라.`
+      : ctx;
+    const prompts = {
+      fortune: () => fortunePrompt(ctx2),
+      health: () => healthPrompt(ctx2),
+      da: () => daeunBatchPrompt(ctx2, s, 0, 4),
+      db: () => daeunBatchPrompt(ctx2, s, 4, 8),
+    };
+    const rest = todo.filter(k=>k!=="life");
+    const rs = await Promise.allSettled(rest.map(k=>callClaude(prompts[k](), runIdRef.current)));
+    rs.forEach((r,i)=>{
+      const k = rest[i]; bump();
+      if (r.status!=="fulfilled"){ miss(r.reason); fail.push(k); return; }
+      take(k, r.value);
     });
-    Object.assign(resultsRef.current.life, lifeAdd);
-    Object.assign(resultsRef.current.fortune, fortAdd);
-    Object.assign(resultsRef.current.duText, duAdd);
-    if (Object.keys(lifeAdd).length) setLife(p=>({...(p||{}), ...lifeAdd}));
-    if (Object.keys(fortAdd).length) setFortune(p=>({...(p||{}), ...fortAdd}));
-    if (Object.keys(duAdd).length) setDuText(p=>({...p, ...duAdd}));
     return fail;
   };
 
@@ -632,16 +662,16 @@ export default function App() {
     const f = fArg || form;
     if (fArg) setForm(fArg);
     const s = computeSaju(f);
-    setSj(s); setLife(null); setFortune(null); setTab("life");
+    setSj(s); setLife(null); setFortune(null); setHealth(null); setTab("life");
     setSelDu(null); setDuText({}); setSheet(null); setFailed(null); setLoadMsg(0);
-    resultsRef.current = { life:{}, fortune:{}, duText:{} };
+    resultsRef.current = { life:{}, fortune:{}, health:{}, duText:{} };
     runIdRef.current = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
     try {
       const hit = await store.get(storeKey(f));
       if (hit) {
         const d = JSON.parse(hit.value);
         resultsRef.current = d;
-        setLife(d.life); setFortune(d.fortune); setDuText(d.duText||{});
+        setLife(d.life); setFortune(d.fortune); setHealth(d.health||null); setDuText(d.duText||{});
         setStep("result");
         return;
       }
@@ -835,7 +865,7 @@ export default function App() {
               : <>
                   <span key={loadMsg} className="mg-loadmsg">{LOAD_MSGS[loadMsg]}</span>
                   <div className="mg-progbar"><div style={{width:(prog.total?Math.max(6,prog.done/prog.total*100):6)+"%"}} /></div>
-                  <div className="mg-progtxt">천기 {prog.total||4}장 중 {prog.done}장을 읽었다</div>
+                  <div className="mg-progtxt">천기 {prog.total||5}장 중 {prog.done}장을 읽었다</div>
                 </>}
           </div>
         )}
@@ -970,6 +1000,7 @@ export default function App() {
             <div className="mg-tabs">
               <button className={"mg-tab"+(tab==="life"?" on":"")} onClick={()=>switchTab("life")}>인생행로</button>
               <button className={"mg-tab"+(tab==="fortune"?" on":"")} onClick={()=>switchTab("fortune")}>丙午년 운세</button>
+              <button className={"mg-tab"+(tab==="health"?" on":"")} onClick={()=>switchTab("health")}>건강행로</button>
             </div>
 
             {tab==="life" && life && <>
@@ -988,13 +1019,19 @@ export default function App() {
               <Stage hanja="身" name="건강운" text={fortune["건강운"]} />
             </>}
 
+            {tab==="health" && health && <>
+              <Stage hanja="臟" name="타고난 약처" text={health["타고난 약처"]} />
+              <Stage hanja="時" name="조심할 시기" text={health["조심할 시기"]} />
+              <Stage hanja="禳" name="액막이 처방" text={health["액막이"]} />
+            </>}
+
             <button className="mg-back" onClick={()=>setStep("input")}>← 다른 사주 보기</button>
           </>
         )}
 
         <div className="mg-foot">
           절입 시각·진태양시를 반영한 정밀 명식 기준.<br/>
-          고전 명리 해석 전통에 따른 직설 풀이로, 예언이 아닌 참고용이다.
+          고전 명리 해석 전통에 따른 직설 풀이로, 예언이 아닌 참고용이다.<br/>건강 대목은 오행 전통 해석이며 의학적 진단·치료가 아니다. 실제 증상은 병원 진료가 우선이다.
         </div>
       </div>
 
