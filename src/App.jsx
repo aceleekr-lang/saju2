@@ -361,8 +361,11 @@ function splitEasy(t) {
 }
 
 /* ── 프롬프트 ── */
-const lifePrompt = ctx =>
-  `${STYLE}\n\n${ctx}\n\n위 명식으로 평생의 행로를 네 시기로 나눠 풀이하라. 각 시기를 지나는 대운 글자와 원국의 관계(합충, 신살, 십성), 용신 성격을 근거로 실제 삶의 사건 결로 서술한다. 청소년기(1~19세)는 성정·가정환경의 기운·학업, 청년기(20~39세)는 진로·인연·좌절과 발복 시점, 중년기(40~59세)는 재물·명예의 성쇠와 부부·가족 인연의 굴곡, 노년기(60세 이후)는 말년의 형세까지 험한 대목도 그대로 쓴다. 각 시기 350자 내외.\n출력 형식을 정확히 지켜라:\n[[청소년기]]\n내용\n[[청년기]]\n내용\n[[중년기]]\n내용\n[[노년기]]\n내용`;
+const lifePromptA = ctx =>
+  `${STYLE}\n\n${ctx}\n\n위 명식으로 초년·청소년기(1~19세)와 청년기(20~39세)를 풀이하라. 각 시기를 지나는 대운 글자와 원국의 관계(합충, 신살, 십성), 용신 성격을 근거로 실제 삶의 사건 결로 서술한다. 청소년기는 성정·가정환경의 기운·학업, 청년기는 진로·인연·좌절과 발복 시점까지 험한 대목도 그대로 쓴다. 각 시기 350자 내외.\n출력 형식을 정확히 지켜라:\n[[청소년기]]\n내용\n[[청년기]]\n내용`;
+
+const lifePromptB = ctx =>
+  `${STYLE}\n\n${ctx}\n\n위 명식으로 중년기(40~59세)와 노년기(60세 이후)를 풀이하라. 각 시기를 지나는 대운 글자와 원국의 관계(합충, 신살, 십성), 용신 성격을 근거로 실제 삶의 사건 결로 서술한다. 중년기는 재물·명예의 성쇠와 부부·가족 인연의 굴곡, 노년기는 말년의 형세까지 험한 대목도 그대로 쓴다. 각 시기 350자 내외.\n출력 형식을 정확히 지켜라:\n[[중년기]]\n내용\n[[노년기]]\n내용`;
 
 const fortunePrompt = ctx =>
   `${STYLE}\n\n${ctx}\n\n${CUR_YEAR}년 병오년 세운과 현재 대운을 원국에 대입해 올해의 금전운, 연애운, 사업운, 직장·명예운, 대인관계운, 건강운을 풀이하라. 각 항목의 첫 줄에는 등급 한 단어만 쓴다(대길/길/평/흉/대흉 중 하나). 둘째 줄부터 본문 220자 내외, 길흉을 분명히 가르고 근거 글자를 명시한다. 흉·대흉 항목은 마지막 문장에 그 흉을 줄일 실질적 대비책 한 문장을 붙인다. 건강운은 오행 불균형이 가리키는 경향까지만 말하고 진단은 하지 않는다.\n출력 형식을 정확히 지켜라:\n[[금전운]]\n등급\n내용\n[[연애운]]\n등급\n내용\n[[사업운]]\n등급\n내용\n[[직장·명예운]]\n등급\n내용\n[[대인관계운]]\n등급\n내용\n[[건강운]]\n등급\n내용`;
@@ -578,7 +581,7 @@ export default function App() {
     return n;
   });
 
-  const storeKey = f => `mg5:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
+  const storeKey = f => `mg7:${f.y}-${f.m}-${f.d}-${f.noTime?"x":f.h+"_"+f.min}-${f.gender}-${f.solarFix?1:0}-${f.zasi}`;
 
   useEffect(()=>{ (async()=>{
     try { const r = await store.get("mg:last");
@@ -593,14 +596,14 @@ export default function App() {
 
   const loadAll = async (s, keys, f) => {
     const ctx = buildCtx(s, f||form);
-    const todo = keys || ["life","fortune","health","da","db"];
+    const todo = keys || ["lifeA","lifeB","fortune","health","da","db"];
     setProg({ done:0, total:todo.length });
     setFailMsg(null);
     const fail=[]; let done=0;
     const bump = ()=>{ done++; setProg({ done, total:todo.length }); };
     const miss = e => { if (!fail.length) setFailMsg((e && e.message) || null); };
     const take = (k, text) => {
-      if (k==="life") {
+      if (k==="lifeA" || k==="lifeB") {
         const add = parseSections(text);
         Object.assign(resultsRef.current.life, add);
         setLife(p=>({ ...(p||{}), ...add }));
@@ -621,10 +624,15 @@ export default function App() {
     };
 
     // 1단계: 인생행로 총론을 먼저 확정한다 (모든 풀이의 일관성 기준)
-    if (todo.includes("life")) {
-      try { take("life", await callClaude(lifePrompt(ctx), runIdRef.current)); }
-      catch(e){ miss(e); fail.push("life"); }
-      bump();
+    const lifeKeys = todo.filter(k=>k==="lifeA"||k==="lifeB");
+    if (lifeKeys.length) {
+      const lp = { lifeA: lifePromptA(ctx), lifeB: lifePromptB(ctx) };
+      const rs1 = await Promise.allSettled(lifeKeys.map(k=>callClaude(lp[k], runIdRef.current)));
+      rs1.forEach((r,i)=>{
+        const k = lifeKeys[i]; bump();
+        if (r.status!=="fulfilled"){ miss(r.reason); fail.push(k); return; }
+        take(k, r.value);
+      });
     }
 
     // 2단계: 확정된 총론을 전제로 운세·대운을 병렬 생성한다
@@ -640,7 +648,7 @@ export default function App() {
       da: () => daeunBatchPrompt(ctx2, s, 0, 4),
       db: () => daeunBatchPrompt(ctx2, s, 4, 8),
     };
-    const rest = todo.filter(k=>k!=="life");
+    const rest = todo.filter(k=>k!=="lifeA"&&k!=="lifeB");
     const rs = await Promise.allSettled(rest.map(k=>callClaude(prompts[k](), runIdRef.current)));
     rs.forEach((r,i)=>{
       const k = rest[i]; bump();
@@ -865,7 +873,7 @@ export default function App() {
               : <>
                   <span key={loadMsg} className="mg-loadmsg">{LOAD_MSGS[loadMsg]}</span>
                   <div className="mg-progbar"><div style={{width:(prog.total?Math.max(6,prog.done/prog.total*100):6)+"%"}} /></div>
-                  <div className="mg-progtxt">천기 {prog.total||5}장 중 {prog.done}장을 읽었다</div>
+                  <div className="mg-progtxt">천기 {prog.total||6}장 중 {prog.done}장을 읽었다</div>
                 </>}
           </div>
         )}
